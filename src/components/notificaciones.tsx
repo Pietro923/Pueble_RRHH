@@ -35,10 +35,10 @@ const NotificationBell = () => {
     const fetchData = async () => {
       try {
         // Obtener empresas (Grupo_Pueble) — supondremos que es una tabla en Supabase
-        const { data: empresas, error: empresaError } = await db.from("Grupo_Pueble").select("nombre");
+        const { data: empresas, error: empresaError } = await db.from('company_groups').select("name");
         if (empresaError) throw empresaError;
 
-        const companyNames = empresas?.map(e => e.nombre) || [];
+        const companyNames = empresas?.map(e => e.name) || [];
         setCompanies(companyNames);
 
         // Obtener recordatorios de todas las empresas

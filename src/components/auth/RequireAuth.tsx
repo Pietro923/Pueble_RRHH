@@ -1,54 +1,64 @@
-// components/auth/RequireAuth.tsx
 "use client"
 
-import { useEffect, useState } from "react"
-import { getAuth, onAuthStateChanged } from "firebase/auth"
-import { useRouter } from "next/navigation"
-import { doc, getDoc } from "firebase/firestore"
-import { db } from "@/lib/supabaseConfig" // Asegúrate de tener configurado tu cliente de Firestore
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseConfig";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const [isLoading, setIsLoading] = useState(true)
-  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    const auth = getAuth()
-    
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.push('/login')
-        return
+    const session = supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        router.push('/login');
+        return;
       }
 
-      try {
-        // Verificar el rol en Firestore
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        const userData = userDoc.data()
+      checkUserRole(session.user.id);
+    });
 
-        if (!userDoc.exists() || userData?.role !== 'ADMIN') {
-          // Si no es admin, redirigir a una página de acceso denegado
-          router.push('/unauthorized')
-          return
-        }
-      } catch (error) {
-        console.error('Error verificando permisos:', error)
-        router.push('/unauthorized')
-        return
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.push('/login');
+      } else {
+        checkUserRole(session.user.id);
       }
+    });
 
-      setIsLoading(false)
-    })
+    return () => subscription.unsubscribe();
+  }, []);
 
-    return () => unsubscribe()
-  }, [router])
+  const checkUserRole = async (userId: string) => {
+    const { data, error } = await supabase
+      .from('usuarios')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      console.error("Error al obtener rol:", error);
+      router.push('/unauthorized');
+      return;
+    }
+
+    if (data.role !== 'ADMIN') {
+      router.push('/unauthorized');
+      return;
+    }
+
+    setIsLoading(false);
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 " />
       </div>
-    )
+    );
   }
 
-  return <>{children}</>
+  return <>{children}</>;
 }

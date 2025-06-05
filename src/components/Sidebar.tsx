@@ -14,7 +14,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabaseConfig'; // Tu configuración de Supabase
 
-type Role = "ADMIN" | "rrhh" | "nominas";
+type Role = "admin" | "rrhh" | "nominas";
 
 interface UserProfile {
   id: string;
@@ -79,7 +79,7 @@ export default function Sidebar() {
   const { t } = useTranslation();
 
   const sidebarItems: Record<Role, { href: string; icon: React.ElementType; label: string }[]> = {
-    ADMIN: [
+    admin: [
       { href: "/dashboard", icon: LayoutDashboard, label: t('menu.ADMIN.0.label') },
       { href: "/trabajadores", icon: Users, label: t('menu.ADMIN.1.label') },
       { href: "/asistencia", icon: Calendar, label: t('menu.ADMIN.2.label') },

@@ -58,92 +58,156 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const { t } = useTranslation();
 
-  useEffect(() => {
-    // Función para obtener el perfil del usuario
-    async function fetchUserProfile(userId: string) {
-      try {
-        const { data: profile, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .single();
-
-        if (error) {
-          console.error('Error fetching user profile:', error);
-          // Si no existe el perfil, redirigir a login
-          if (error.code === 'PGRST116') { // No rows returned
-            setIsAuthenticated(false);
-            router.push('/login');
-            return;
+useEffect(() => {
+  async function fetchUserProfile(userId: string, retryCount = 0) {
+    try {
+      console.log('Fetching profile for userId:', userId, 'retry:', retryCount);
+      
+      const { data: profile, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      console.log('Profile query result:', { profile, error });
+      
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        
+        if (error.code === 'PGRST116') { // No rows returned
+          console.log('No profile found, creating new profile...');
+          
+          const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
+          console.log('Current user:', currentUser);
+          
+          if (currentUser?.email) {
+            const profileData = {
+              id: userId,
+              email: currentUser.email,
+              role: 'rrhh' as Role
+            };
+            
+            const { data: newProfile, error: createError } = await supabase
+              .from('users')
+              .insert(profileData)
+              .select()
+              .single();
+            
+            console.log('New profile creation result:', { newProfile, createError });
+            
+            if (newProfile) {
+              setUserProfile(newProfile);
+              console.log('✅ Profile created and set successfully');
+              return; // ✅ EXIT HERE - Success!
+            } else if (createError) {
+              console.error('Error creating profile:', createError);
+              // Solo reintentar, no redirigir
+              if (retryCount < 2) {
+                setTimeout(() => fetchUserProfile(userId, retryCount + 1), 1000);
+                return;
+              }
+            }
+          } else {
+            // Reintentar si no hay usuario
+            if (retryCount < 2) {
+              console.log('Retrying fetchUserProfile - no current user');
+              setTimeout(() => fetchUserProfile(userId, retryCount + 1), 1000);
+              return;
+            }
           }
         }
-
-        if (profile) {
-          setUserProfile(profile);
+        
+        // Solo redirigir después de múltiples fallos
+        if (retryCount >= 2) {
+          console.error('❌ Multiple failures, redirecting to login');
+          setIsAuthenticated(false);
+          router.push('/login');
         }
-      } catch (error) {
-        console.error('Error in fetchUserProfile:', error);
+        
+      } else if (profile) {
+        console.log('✅ Profile found:', profile);
+        setUserProfile(profile);
+      }
+    } catch (error) {
+      console.error('Error in fetchUserProfile:', error);
+      
+      // Solo redirigir después de múltiples intentos
+      if (retryCount < 2) {
+        console.log('Retrying fetchUserProfile due to catch block');
+        setTimeout(() => fetchUserProfile(userId, retryCount + 1), 1000);
+      } else {
+        console.error('❌ Final failure, redirecting to login');
         setIsAuthenticated(false);
         router.push('/login');
       }
     }
+  }
 
-    // Verificar sesión inicial
-    async function getInitialSession() {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          console.error('Error getting session:', error);
-          setIsAuthenticated(false);
-          return;
-        }
-
-        if (session?.user) {
-          setUser(session.user);
-          setIsAuthenticated(true);
-          await fetchUserProfile(session.user.id);
-        } else {
-          setIsAuthenticated(false);
-          if (!isLoggingOut && pathname !== '/login') {
-            router.push('/login');
-          }
-        }
-      } catch (error) {
-        console.error('Error in getInitialSession:', error);
+  // Verificar sesión inicial
+  async function getInitialSession() {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Error getting session:', error);
         setIsAuthenticated(false);
+        return;
+      }
+
+      if (session?.user) {
+        console.log('✅ Initial session found for user:', session.user.email);
+        setUser(session.user);
+        setIsAuthenticated(true);
+        await fetchUserProfile(session.user.id);
+      } else {
+        console.log('❌ No initial session found');
+        setIsAuthenticated(false);
+        if (!isLoggingOut && pathname !== '/login') {
+          router.push('/login');
+        }
+      }
+    } catch (error) {
+      console.error('Error in getInitialSession:', error);
+      setIsAuthenticated(false);
+    }
+  }
+
+  getInitialSession();
+
+  // Escuchar cambios en la autenticación
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      console.log('🔄 Auth state changed:', event, session?.user?.email || 'no user');
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        console.log('✅ User signed in:', session.user.email);
+        setUser(session.user);
+        setIsAuthenticated(true);
+        // Esperar un poco y luego obtener perfil
+        setTimeout(() => {
+          console.log('⏳ Fetching profile after sign in...');
+          fetchUserProfile(session.user.id);
+        }, 500);
+        
+      } else if (event === 'SIGNED_OUT') {
+        console.log('❌ User signed out');
+        setUser(null);
+        setUserProfile(null);
+        setIsAuthenticated(false);
+        if (!isLoggingOut && pathname !== '/login') {
+          router.push('/login');
+        }
+      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+        console.log('🔄 Token refreshed for:', session.user.email);
+        setUser(session.user);
       }
     }
+  );
 
-    getInitialSession();
-
-    // Escuchar cambios en la autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-
-        if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user);
-          setIsAuthenticated(true);
-          await fetchUserProfile(session.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setUserProfile(null);
-          setIsAuthenticated(false);
-          if (!isLoggingOut && pathname !== '/login') {
-            router.push('/login');
-          }
-        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-          setUser(session.user);
-          // Opcionalmente refrescar el perfil
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [pathname, router, isLoggingOut]);
+  return () => {
+    subscription.unsubscribe();
+  };
+}, [pathname, router, isLoggingOut]);
 
   const handleLogout = async () => {
     try {

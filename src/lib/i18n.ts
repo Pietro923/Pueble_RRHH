@@ -152,7 +152,7 @@ const resources = {
             },
             notificationBell: {
                 title: "Reminders",
-                noReminders: "No pending reminders",
+                noNotifications: "No pending reminders",
                 status: {
                   todayExpires: "Expires today",
                   daysRemaining: "days remaining",
@@ -939,7 +939,7 @@ const resources = {
   },
   notificationBell: {
     title: "Recordatorios",
-    noReminders: "No hay recordatorios pendientes",
+    noNotifications: "No hay recordatorios pendientes",
     status: {
       todayExpires: "Vence hoy",
       daysRemaining: "días restantes",
@@ -1737,7 +1737,7 @@ const resources = {
             },
             notificationBell: {
                 title: "Rappels",
-                noReminders: "Aucun rappel en attente",
+                noNotifications: "Aucun rappel en attente",
                 status: {
                   todayExpires: "Expire aujourd'hui",
                   daysRemaining: " jours restants",

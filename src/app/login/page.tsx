@@ -1,68 +1,61 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
-import { motion } from "framer-motion";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useTranslation } from "react-i18next";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Card } from "@/components/ui/card"
+import { Loader2, Mail, Lock, AlertCircle } from "lucide-react"
+import { motion } from "framer-motion"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useTranslation } from "react-i18next"
+import { supabase } from "@/lib/supabaseConfig"
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
-  const { t } = useTranslation();
-  const supabase = createClientComponentClient(); // Cliente del lado del cliente
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState("")
+  const router = useRouter()
+  const { t } = useTranslation()
 
   useEffect(() => {
-    document.body.style.pointerEvents = "auto";
+    document.body.style.pointerEvents = 'auto'
     return () => {
-      document.body.style.pointerEvents = "auto";
-    };
-  }, []);
+      document.body.style.pointerEvents = 'auto'
+    }
+  }, [])
 
   const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError("");
+    e.preventDefault()
+    setIsLoading(true)
+    setError("")
 
-    const { data, error: supabaseError } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
-    });
+      password
+    })
 
-    if (supabaseError) {
-      if (supabaseError.message.includes("Invalid login credentials")) {
-        setError(t("login.contraseña_incorrecta"));
+    if (error) {
+      if (error.message.includes("Invalid login credentials")) {
+        setError(t('login.contraseña_incorrecta'))
       } else {
-        setError(t("login.error_autenticacion"));
+        setError(t('login.error_autenticacion'))
       }
-      setIsLoading(false);
-      return;
-    }
-
-    if (data.session) {
-      router.push("/");
     } else {
-      setError(t("login.error_autenticacion"));
+      router.push("/") // Redirige al home o page.tsx
     }
 
-    setIsLoading(false);
-  };
+    setIsLoading(false)
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-100 dark:bg-gray-950">
       {/* Sección izquierda: Formulario */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 lg:px-20">
         <div className="max-w-md w-full mx-auto space-y-8">
-          <motion.div
+          <motion.div 
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5 }}
@@ -84,10 +77,10 @@ export default function LoginPage() {
               <div className="space-y-6">
                 <div className="space-y-2 text-center">
                   <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                    {t("login.bienvenido")}
+                    {t('login.bienvenido')}
                   </h1>
                   <p className="text-gray-500 dark:text-gray-400">
-                    {t("login.ingresa_credenciales")}
+                    {t('login.ingresa_credenciales')}
                   </p>
                 </div>
 
@@ -95,7 +88,7 @@ export default function LoginPage() {
                   <div className="space-y-4">
                     <div className="relative">
                       <Label htmlFor="email" className="text-sm font-medium dark:text-gray-300">
-                        {t("login.correo_electronico")}
+                        {t('login.correo_electronico')}
                       </Label>
                       <div className="relative mt-1">
                         <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
@@ -104,7 +97,7 @@ export default function LoginPage() {
                           type="email"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          placeholder={t("login.placeholder_email")}
+                          placeholder={t('login.placeholder_email')}
                           required
                           className="pl-10 h-12 bg-gray-50/50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200 focus:bg-white dark:focus:bg-gray-800 rounded-xl"
                         />
@@ -113,7 +106,7 @@ export default function LoginPage() {
 
                     <div className="relative">
                       <Label htmlFor="password" className="text-sm font-medium dark:text-gray-300">
-                        {t("login.contraseña")}
+                        {t('login.contraseña')}
                       </Label>
                       <div className="relative mt-1">
                         <Lock className="absolute left-3 top-3 h-5 w-5 text-gray-400 dark:text-gray-500" />
@@ -122,7 +115,7 @@ export default function LoginPage() {
                           type="password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          placeholder={t("login.placeholder_password")}
+                          placeholder={t('login.placeholder_password')}
                           required
                           className="pl-10 h-12 bg-gray-50/50 border-gray-200 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-200 focus:bg-white dark:focus:bg-gray-800 rounded-xl"
                         />
@@ -145,10 +138,10 @@ export default function LoginPage() {
                     {isLoading ? (
                       <div className="flex items-center justify-center space-x-2">
                         <Loader2 className="h-5 w-5 animate-spin" />
-                        <span>{t("login.iniciando_sesion")}</span>
+                        <span>{t('login.iniciando_sesion')}</span>
                       </div>
                     ) : (
-                      t("login.iniciar_sesion")
+                      t('login.iniciar_sesion')
                     )}
                   </Button>
                 </form>
@@ -169,21 +162,21 @@ export default function LoginPage() {
             alt="Ilustración de progreso"
             className="max-w-md w-full h-auto hover:scale-105 transition-transform duration-300"
           />
-          <motion.div
+          <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ duration: 0.5, delay: 0.2 }}
             className="text-center space-y-4 max-w-md"
           >
             <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              {t("login.gestiona_proyectos")}
+              {t('login.gestiona_proyectos')}
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-lg">
-              {t("login.monitorea_progreso")}
+              {t('login.monitorea_progreso')}
             </p>
           </motion.div>
         </div>
       </div>
     </div>
-  );
+  )
 }
